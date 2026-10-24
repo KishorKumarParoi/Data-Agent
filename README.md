@@ -1,6 +1,24 @@
-# Data Agent: Enterprise Multi-Agent Data Intelligence System
+# 🤖 Data Agent: Enterprise Multi-Agent Data Intelligence System
+
+[![Architecture Flow](docs/images/01_architecture_flow.svg)](docs/images/01_architecture_flow.svg)
+
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-State_Machine-1C3C3C?style=for-the-badge)](https://langchain.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Architecture Blueprint](https://img.shields.io/badge/Architecture-Enterprise_Blueprint-blue?style=for-the-badge)](ARCHITECTURE.md)
 
 An industry-standard, multi-agent AI system built with **LangGraph**, **LangChain**, and **PostgreSQL**. The platform intelligently orchestrates natural language business intelligence queries, secure SQL execution with an automated security judge, and automated ETL (Extract, Transform, Load) pipelines.
+
+---
+
+## ⚡ One-Click Cloud Bootstrap (Zero-Touch)
+
+Deploy the multi-agent mesh and PostgreSQL database on any Ubuntu, Debian, AWS EC2, GCP Compute Engine, or macOS instance with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/KishorKumarParoi/Data-Agent/main/bootstrap.sh | bash
+```
 
 ---
 
