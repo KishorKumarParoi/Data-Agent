@@ -162,3 +162,22 @@ Data-Agent/
 ├── main.py                # Rich CLI interface (interactive & single query)
 └── pyproject.toml         # Dependencies and metadata
 ```
+
+## 🚀 Zero-Touch Instant Cloud & Workstation Deployment
+
+Deploy this platform on **any fresh EC2 instance, cloud VM, or local machine with a single terminal command**:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/KishorKumarParoi/Data-Agent/main/bootstrap.sh | bash
+```
+
+### 🆘 One-Click Link For Whom It Is Not Working (Zero-Docker Standalone Mode)
+If Docker is not running or permissions are restricted, run this instant fail-safe native command:
+```bash
+curl -fsSL https://raw.githubusercontent.com/KishorKumarParoi/Data-Agent/main/bootstrap.sh | bash -s -- --standalone
+```
+
+### 🧹 Zero-Cost Instant Teardown ($0.00/hr):
+```bash
+./clear.sh
+```

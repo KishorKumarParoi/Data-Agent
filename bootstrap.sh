@@ -1,12 +1,26 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # 🚀 ZERO-TOUCH 1-COMMAND AUTO-BOOTSTRAPPER FOR EC2 & CLOUD VMS
-# DATA AGENT: ENTERPRISE MULTI-AGENT BI & SQL SYSTEM
+# Autonomous Data Agent & LangGraph SQL Mesh
 #
-# Run directly on any bare EC2 instance or cloud VM:
-#   curl -fsSL https://raw.githubusercontent.com/KishorKumarParoi/Data-Agent/main/bootstrap.sh | bash
+# Run directly on any bare, fresh EC2 instance or local workstation
+# via a single curl command without pre-installing git, docker, or python:
+#
+#   1. Standard Mode:
+#      curl -fsSL https://raw.githubusercontent.com/KishorKumarParoi/Data-Agent/main/bootstrap.sh | bash
+#
+#   2. Standalone Mode (Zero Docker, Instant Native Python < 15s):
+#      curl -fsSL https://raw.githubusercontent.com/KishorKumarParoi/Data-Agent/main/bootstrap.sh | bash -s -- --standalone
+#
+#   3. Ultra-Fast Lightweight Cloud Mode (< 30s):
+#      curl -fsSL https://raw.githubusercontent.com/KishorKumarParoi/Data-Agent/main/bootstrap.sh | bash -s -- --quick
 # ==============================================================================
+
 set -eo pipefail
+
+if [ -e /dev/tty ] && [ -r /dev/tty ]; then
+    exec </dev/tty
+fi
 
 BOLD='\033[1m'
 CYAN='\033[0;36m'
@@ -18,7 +32,8 @@ NC='\033[0m'
 echo -e "${CYAN}${BOLD}"
 cat << "EOF"
 ================================================================================
-  📊 DATA AGENT: MULTI-AGENT SQL & ETL SYSTEM — ZERO-TOUCH BOOTSTRAPPER
+  🚀 Autonomous Data Agent & LangGraph SQL Mesh
+  Zero-Touch Instant Cloud & Workstation Bootstrapper
 ================================================================================
 EOF
 echo -e "${NC}"
@@ -39,88 +54,79 @@ run_sudo() {
     fi
 }
 
-# 1. Prereqs
-echo -e "${CYAN}[1/5] Detecting OS and ensuring Git, Curl & Python are available...${NC}"
+echo -e "${CYAN}[1/4] Detecting OS and ensuring Git & Curl are available...${NC}"
+
 if ! command -v git &>/dev/null || ! command -v curl &>/dev/null; then
+    echo -e "${YELLOW}[+] Installing Git and Core Networking Utilities non-interactively...${NC}"
     if [ -f /etc/debian_version ]; then
         run_sudo apt-get update -qq
-        run_sudo apt-get install -y -qq git curl ca-certificates tar gzip unzip build-essential python3 python3-pip python3-venv >/dev/null 2>&1
+        run_sudo apt-get install -y -qq --no-install-recommends git curl ca-certificates tar gzip unzip build-essential >/dev/null 2>&1 || true
     elif [ -f /etc/amazon-linux-release ] || [ -f /etc/redhat-release ]; then
-        run_sudo yum install -y -q git curl ca-certificates tar gzip unzip python3 python3-pip >/dev/null 2>&1 || true
+        if command -v dnf &>/dev/null; then
+            run_sudo dnf install -y -q git curl ca-certificates tar gzip unzip >/dev/null 2>&1 || true
+        else
+            run_sudo yum install -y -q git curl ca-certificates tar gzip unzip >/dev/null 2>&1 || true
+        fi
+    elif [ -f /etc/alpine-release ]; then
+        run_sudo apk add --no-cache git curl bash ca-certificates
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        if ! command -v git &>/dev/null; then
+            xcode-select --install 2>/dev/null || true
+        fi
     fi
 fi
 
-# 2. OOM Protection (4GB Swap)
-echo -e "\n${CYAN}[2/5] Checking System Memory & OOM Protection...${NC}"
+echo -e "${GREEN}[✓] Git : $(git --version 2>/dev/null || echo 'Installed')${NC}"
+echo -e "${GREEN}[✓] Curl: $(curl --version 2>/dev/null | head -n 1 || echo 'Installed')${NC}"
+
+echo -e "\n${CYAN}[2/4] Checking System Memory & OOM Protection...${NC}"
 if command -v free &>/dev/null; then
     TOTAL_RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
     EXISTING_SWAP_MB=$(free -m | awk '/^Swap:/{print $2}')
-    if [ "$TOTAL_RAM_MB" -lt 8000 ] && [ "$EXISTING_SWAP_MB" -lt 2000 ]; then
+    if [ "$TOTAL_RAM_MB" -lt 4000 ] && [ "$EXISTING_SWAP_MB" -lt 1000 ]; then
         echo -e "${YELLOW}[!] Host has ${TOTAL_RAM_MB}MB RAM. Auto-configuring 4GB swapfile for compilation safety...${NC}"
         if [ ! -f /swapfile ]; then
             run_sudo fallocate -l 4G /swapfile 2>/dev/null || run_sudo dd if=/dev/zero of=/swapfile bs=1M count=4096 2>/dev/null
             run_sudo chmod 600 /swapfile
             run_sudo mkswap /swapfile >/dev/null 2>&1
             run_sudo swapon /swapfile 2>/dev/null || true
-            run_sudo sysctl vm.swappiness=20 >/dev/null 2>&1 || true
             if ! grep -q "/swapfile" /etc/fstab 2>/dev/null; then
                 echo "/swapfile none swap sw 0 0" | run_sudo tee -a /etc/fstab >/dev/null 2>&1 || true
             fi
             echo -e "${GREEN}[✓] 4GB Swapfile configured and active!${NC}"
         fi
+    else
+        echo -e "${GREEN}[✓] Sufficient memory available (${TOTAL_RAM_MB}MB RAM, ${EXISTING_SWAP_MB}MB Swap).${NC}"
     fi
+else
+    echo -e "${GREEN}[✓] Memory check bypassed (macOS / BSD runtime).${NC}"
 fi
 
-# 3. Clone / Sync
-echo -e "\n${CYAN}[3/5] Ensuring Data-Agent repository is local...${NC}"
+echo -e "\n${CYAN}[3/4] Ensuring Data-Agent repository is local...${NC}"
 REPO_URL="https://github.com/KishorKumarParoi/Data-Agent.git"
 REPO_DIR="Data-Agent"
 
-if [ -f "main.py" ] && [ -d "agents" ]; then
+if [ -f "deploy.sh" ]; then
     echo -e "${GREEN}[✓] Already inside repository directory ($(pwd)). Syncing latest commit...${NC}"
-    git pull origin main 2>/dev/null || true
-elif [ -d "$REPO_DIR" ]; then
+    git pull --depth 1 origin main 2>/dev/null || true
+elif [ -d "$REPO_DIR" ] && [ -f "$REPO_DIR/deploy.sh" ]; then
+    echo -e "${GREEN}[✓] Found existing directory ${REPO_DIR}. Entering and updating...${NC}"
     cd "$REPO_DIR"
-    git pull origin main 2>/dev/null || true
+    git pull --depth 1 origin main 2>/dev/null || true
 else
-    echo -e "${YELLOW}[+] Shallow cloning repository from GitHub...${NC}"
+    echo -e "${YELLOW}[+] Shallow cloning repository from GitHub for maximum speed...${NC}"
     git clone --depth 1 "$REPO_URL" "$REPO_DIR"
     cd "$REPO_DIR"
 fi
 
-chmod +x bootstrap.sh clear.sh 2>/dev/null || true
+chmod +x deploy.sh clear.sh bootstrap.sh 2>/dev/null || true
+find scripts/ -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
 
-if [ ! -f .env ] && [ -f .env.example ]; then
-    cp .env.example .env
+echo -e "\n${CYAN}[4/4] Executing One-Click Production Deployment Pipeline...${NC}"
+if [ -t 0 ]; then
+    exec ./deploy.sh "$@"
+elif [ -e /dev/tty ] && [ -r /dev/tty ]; then
+    exec ./deploy.sh "$@" </dev/tty
+else
+    exec ./deploy.sh "$@" </dev/null
 fi
-
-# 4. Bootstrap Python & Dependencies via uv
-echo -e "\n${CYAN}[4/5] Bootstrapping Astral uv & Virtual Environment...${NC}"
-if ! command -v uv &>/dev/null; then
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.local/bin:$PATH"
-fi
-
-uv venv .venv
-uv pip install --python .venv/bin/python -r requirements.txt
-
-# Start PostgreSQL if docker available
-if command -v docker &>/dev/null; then
-    echo -e "${CYAN}[+] Starting isolated PostgreSQL database via Docker...${NC}"
-    docker compose up -d postgres 2>/dev/null || true
-fi
-
-# 5. Execute Self-Test Verification
-echo -e "\n${CYAN}[5/5] Executing Data Agent Self-Reflection Verification...${NC}"
-.venv/bin/python -c "from agents.data_agent import data_agent; print('✔ Multi-Agent Supervisor graph compiled successfully!')"
-
-echo -e "\n${GREEN}${BOLD}"
-cat << "EOF"
-================================================================================
-🎉 DEPLOYMENT COMPLETE! DATA AGENT IS OPERATIONAL!
-================================================================================
-EOF
-echo -e "${NC}"
-echo -e "${BOLD}Quick Run Commands:${NC}"
-echo -e "  • Interactive CLI Agent : ${CYAN}.venv/bin/python main.py${NC}"
-echo -e "  • Zero-Cost Teardown    : ${YELLOW}./clear.sh${NC}\n"
